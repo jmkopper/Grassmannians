@@ -1,14 +1,13 @@
 import AbstractAlgebra.parent
-import AbstractAlgebra: zero, one
+import AbstractAlgebra: zero, one, elem_type, parent_type
 
 struct GrassmannianRing <: Generic.Ring
     k::Integer
     n::Integer
-    valid_cycles::Dict{Generic.Partition, Integer}
 
     function GrassmannianRing(k, n)
-        valid_cycles = Dict(p => 0 for p in all_valid_partitions(k, n))
-        new(k, n, valid_cycles)
+        # valid_cycles = Dict(p => 0 for p in all_valid_partitions(k, n))
+        new(k, n)
     end
 end
 
@@ -103,6 +102,7 @@ function *(a::Integer, b::SchubertCycle)::SchubertCycle
     return SchubertCycle(b.k, b.n, terms, parent(b))
 end
 *(a::SchubertCycle, b::Integer)::SchubertCycle = *(b,a)
+-(a::SchubertCycle) = (-1)*a
 -(a::SchubertCycle, b::SchubertCycle)::SchubertCycle = a + (-1)*b
 
 ###############################################################################
@@ -144,6 +144,23 @@ function _pieri_prod(p::Generic.Partition, q::Generic.Partition)::Vector{Generic
     end
 
     return valid_partitions
+end
+
+function _giambelli_matrix(g::GrassmannianRing, p::Generic.Partition)
+    mat_list = []
+    for i in 1:g.k-1
+        l = length(p) >= i ? p[i] : 0
+        row = []
+        for j in 1:g.k-1
+            if l-i+j > 0 && l-i+j <= g.n-g.k
+                push!(row, g([l-i+j]))
+            else
+                push!(row, zero(g))
+            end
+        end
+        push!(mat_list, row)
+    end
+    return matrix(g, reduce(vcat, transpose.(mat_list)))
 end
 
 function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
@@ -199,7 +216,13 @@ function Base.show(io::IO, a::SchubertCycle)
             end
         end
         term_str *= ")"
-        str *= coeff != 1 ? string(coeff) * term_str * " + " : term_str * " + "
+        if coeff == 1
+            str *= term_str * " + "
+        elseif coeff == -1
+            str *= "-" * term_str * " + "
+        elseif coeff != 0
+            str *= string(coeff) * term_str * " + "
+        end
     end
     print(io, str[1:end-2])
 end

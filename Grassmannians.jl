@@ -25,5 +25,6 @@ b = g([2])
 c = g([2])
 d = g([1])
 
-mymat = [a b;c d]
+mymat = g[a b;c d]
 det(mymat)
+m = _giambelli_matrix(g, Partition([3,2]))
