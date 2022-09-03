@@ -1,6 +1,7 @@
 using AbstractAlgebra
 import Base.*
 import Base.+
+import Base.==
 
 include("schubert.jl")
 
@@ -17,16 +18,7 @@ function _is_pieri(p::Generic.Partition)::Bool
   return (length(p) <= 1)
 end
 
-function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
-    if !_is_pieri(p) && !_is_pieri(q)
-        print("Requires a special partition")
-        return
-    end
-    if !_is_pieri(p)
-        # Make p the special partition
-        p, q = q, p
-    end
-
+function pieri_prod(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
     v_n = p.n + q.n
     valid_partitions = []
     for part in Generic.partitions(v_n)
@@ -37,6 +29,21 @@ function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition
 
     return valid_partitions
 end
+
+
+function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
+    if !_is_pieri(p) && !_is_pieri(q)
+        print("Requires a special partition")
+        return
+    end
+    if !_is_pieri(p)
+        # Make p the special partition
+        p, q = q, p
+    end
+
+    return pieri_prod(p, q)
+end
+
 g = GrassmannianRing(3, 6)
 terms_a = Dict(Partition([3,2,1])=>1, Partition([3])=>2)
 a = SchubertCycle(3, 6, terms_a, g)
@@ -51,10 +58,10 @@ a = g([3])
 println(c)
 println(c*a)
 
-# a = g([3])
-# b = g([2])
-# c = g([2])
-# d = g([1])
+a = g([3])
+b = g([2])
+c = g([2])
+d = g([1])
 
-# mymat = [a b;c d]
-# det(mymat)
+mymat = [a b;c d]
+det(mymat)

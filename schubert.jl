@@ -1,4 +1,5 @@
 import AbstractAlgebra.parent
+import AbstractAlgebra: zero, one
 
 struct GrassmannianRing <: Generic.Ring
     k::Integer
@@ -28,26 +29,12 @@ parent_type(::Type{SchubertCycle}) = GrassmannianRing
 
 parent(a::SchubertCycle) = a.parent
 
-function zero(g::GrassmannianRing)
-    qq = Dict{Generic.Partition, Integer}()
-    return SchubertCycle(g.k, g.n, qq, g)
-end
-
-function one(g::GrassmannianRing)
-    p = Partition([0], false)
-    return SchubertCycle(g.k, g.n, Dict(p=> 1), g)
-end
-
-function is_zero(a::SchubertCycle)
-    for (_, v) in a.terms
-        if v > 0
-            return false
-        end
-    end
-    return true
-end
-
+(g::GrassmannianRing)(x::Integer)::SchubertCycle = SchubertCycle(g.k, g.n, Dict(Generic.Partition([0], false)=>x), g)
+one(g::GrassmannianRing)::SchubertCycle = g(1)
+zero(g::GrassmannianRing)::SchubertCycle = g(0)
+is_zero(a::SchubertCycle) = all(values(a.terms) .== 0)
 (g::GrassmannianRing)() = zero(g)
+
 
 function (g::GrassmannianRing)(p::Generic.Partition)::SchubertCycle
     if length(p) <= g.k && p[1] <= g.n-g.k
