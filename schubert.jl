@@ -48,6 +48,7 @@ function is_zero(a::SchubertCycle)
 end
 
 (g::GrassmannianRing)() = zero(g)
+
 function (g::GrassmannianRing)(p::Generic.Partition)::SchubertCycle
     if length(p) <= g.k && p[1] <= g.n-g.k
         return SchubertCycle(g.k, g.n, Dict(p => 1), g)
@@ -58,11 +59,47 @@ end
 
 (g::GrassmannianRing)(p::Vector)::SchubertCycle = g(Partition(p))
 
+
+function (g::GrassmannianRing)(a::SchubertCycle)::SchubertCycle
+    if parent(a) == g
+        return a
+    end
+    throw(DomainError(g, "Schubert cycle $a is not an element of $g"))
+end
+
+function ==(a::SchubertCycle, b::SchubertCycle)
+    if parent(a) != parent(b)
+        return false
+    elseif a.terms != b.terms
+        return false
+    else
+        return true
+    end
+end
+
 ###############################################################################
 #
 #   Schubert calculus
 #
 ###############################################################################
+
+function +(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
+    c = parent(a)()
+    for (part, v) in a.terms
+        if haskey(b.terms, part)
+            c.terms[part] = v + b.terms[part]
+        else
+            c.terms[part] = v
+        end
+    end
+    for (part,v) in b.terms
+        if !haskey(c.terms, part)
+            c.terms[part] = v
+        end
+    end
+    return c
+end
+
 
 function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
     if parent(a) != parent(b)

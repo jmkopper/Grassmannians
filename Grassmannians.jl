@@ -1,5 +1,6 @@
 using AbstractAlgebra
 import Base.*
+import Base.+
 
 include("schubert.jl")
 
