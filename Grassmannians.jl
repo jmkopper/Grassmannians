@@ -1,48 +1,10 @@
 using AbstractAlgebra
 import Base.*
 import Base.+
+import Base.-
 import Base.==
 
 include("schubert.jl")
-
-function _valid_pieri_summand(pieripartition::Generic.Partition, p::Generic.Partition)::Bool
-    for i in 1:min(length(pieripartition), length(p))
-        if pieripartition[i] > p[i] || (i > 1 && pieripartition[i-1] < p[i])
-            return false
-        end
-    end
-    return true
-end
-
-function _is_pieri(p::Generic.Partition)::Bool
-  return (length(p) <= 1)
-end
-
-function pieri_prod(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
-    v_n = p.n + q.n
-    valid_partitions = []
-    for part in Generic.partitions(v_n)
-        if _valid_pieri_summand(q, part)
-            push!(valid_partitions, part)
-        end
-    end
-
-    return valid_partitions
-end
-
-
-function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
-    if !_is_pieri(p) && !_is_pieri(q)
-        print("Requires a special partition")
-        return
-    end
-    if !_is_pieri(p)
-        # Make p the special partition
-        p, q = q, p
-    end
-
-    return pieri_prod(p, q)
-end
 
 g = GrassmannianRing(3, 6)
 terms_a = Dict(Partition([3,2,1])=>1, Partition([3])=>2)

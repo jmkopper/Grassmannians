@@ -4,8 +4,12 @@ import AbstractAlgebra: zero, one
 struct GrassmannianRing <: Generic.Ring
     k::Integer
     n::Integer
+    valid_cycles::Dict{Generic.Partition, Integer}
 
-    GrassmannianRing(k, n) = new(k, n)
+    function GrassmannianRing(k, n)
+        valid_cycles = Dict(p => 0 for p in all_valid_partitions(k, n))
+        new(k, n, valid_cycles)
+    end
 end
 
 
@@ -14,8 +18,6 @@ struct SchubertCycle <: RingElem
     n::Integer
     terms::Dict{Generic.Partition, Integer}
     parent::GrassmannianRing
-
-    # SchubertCycle(k, n, terms, parent) = new(k, n, Dict(sort(collect(terms), by = x->x[1])), parent)
 end
 
 ###############################################################################
@@ -48,27 +50,36 @@ end
 
 
 function (g::GrassmannianRing)(a::SchubertCycle)::SchubertCycle
-    if parent(a) == g
-        return a
-    end
+    parent(a) == g && return a
     throw(DomainError(g, "Schubert cycle $a is not an element of $g"))
 end
 
-function ==(a::SchubertCycle, b::SchubertCycle)
-    if parent(a) != parent(b)
-        return false
-    elseif a.terms != b.terms
-        return false
-    else
-        return true
-    end
-end
+#=
+Thots:
+- Have the grassmannian constructor initialize ALL possible partitions as a hash with k=>0 for all k
+- Change *(...) to iterate through this instead of re-generate all partitions
+- Have schubertcycle constructor pull from this too
+- use Holy traits to detect special partitions for pieri
+=#
+
 
 ###############################################################################
 #
-#   Schubert calculus
+#   Vector operations
 #
 ###############################################################################
+function ==(a::SchubertCycle, b::SchubertCycle)
+    parent(a) != parent(b) && return false
+        for (p, v) in a.terms
+            if haskey(b.terms, p)
+                b.terms[p] == v || return false
+            elseif v !=0
+                return false
+            end
+        end
+    return true
+end
+
 
 function +(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
     c = parent(a)()
@@ -87,6 +98,66 @@ function +(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
     return c
 end
 
+function *(a::Integer, b::SchubertCycle)::SchubertCycle
+    terms = Dict(p=>a*v for (p,v) in b.terms)
+    return SchubertCycle(b.k, b.n, terms, parent(b))
+end
+*(a::SchubertCycle, b::Integer)::SchubertCycle = *(b,a)
+-(a::SchubertCycle, b::SchubertCycle)::SchubertCycle = a + (-1)*b
+
+###############################################################################
+#
+#   Schubert calculus
+#
+###############################################################################
+
+function is_special_cycle(a::SchubertCycle)::Bool
+    nonzero_terms = [v for v in values(a.terms) if v != 0]
+    return length(nonzero_terms) == 1
+end
+
+_is_pieri(p::Generic.Partition)::Bool = (length(p) <= 1)
+
+   
+function _valid_pieri_summand(product_partition::Generic.Partition, summand_partition::Generic.Partition)::Bool
+    """
+    Determine whether `summand_partition` is a valid summand in Pieri's formula, assuming its codimension is correct (not checked)
+    """
+    for i in 1:max(length(product_partition), length(summand_partition))
+        cur_prod = length(product_partition) >= i ? product_partition[i] : 0
+        prev_prod = (length(product_partition) >= i-1) && (i > 1) ? product_partition[i-1] : 0
+        cur_sum = length(summand_partition) >= i ? summand_partition[i] : 0
+        if cur_sum < cur_prod || (cur_sum > prev_prod && i > 1)
+            return false
+        end
+    end
+    return true
+end
+
+function _pieri_prod(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
+    v_n = p.n + q.n
+    valid_partitions = []
+    for part in Generic.partitions(v_n)
+        if _valid_pieri_summand(q, part)
+            push!(valid_partitions, part)
+        end
+    end
+
+    return valid_partitions
+end
+
+function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
+    if !_is_pieri(p) && !_is_pieri(q)
+        print("Requires a special partition")
+        return
+    end
+    if !_is_pieri(p)
+        # Make p the special partition
+        p, q = q, p
+    end
+
+    return _pieri_prod(p, q)
+end
 
 function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
     if parent(a) != parent(b)
@@ -95,11 +166,8 @@ function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
 
     g = parent(a)
 
-    if a == zero(g)
-        return b
-    end
-    if b == zero(g)
-        return a
+    if a == zero(g) || b == zero(g)
+        return zero(g)
     end
 
     terms = Dict{Generic.Partition, Integer}()
@@ -141,5 +209,16 @@ function test(a::SchubertCycle)::Integer
     return a.k
 end
 
-_valid_partition(k::Integer, n::Integer, part::Generic.Partition)::Bool = (part[1] <= n-k) && (length(part) <= k)
-_valid_schubert_cylce(k::Integer, n::Integer, a::SchubertCycle)::Bool = all(_valid_partition(part) for part in terms)
+_valid_partition(k::Integer, n::Integer, part::Generic.Partition)::Bool = ((part[1] <= n-k) && (length(part) <= k))
+_valid_schubert_cylce(k::Integer, n::Integer, a::SchubertCycle)::Bool = all(_valid_partition(k, n, part) for part in a.terms)
+
+function all_valid_partitions(k::Integer, n::Integer)
+    parts = []
+    for i in 1:k*(n-k)
+        for p in Generic.partitions(i)
+            _valid_partition(k, n, p) && push!(parts, p)
+        end
+    end
+    push!(parts, Partition([0], false))
+    return parts
+end
