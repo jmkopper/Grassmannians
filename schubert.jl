@@ -1,67 +1,3 @@
-import AbstractAlgebra.parent
-import AbstractAlgebra: zero, one, elem_type, parent_type
-
-struct GrassmannianRing <: Generic.Ring
-    k::Integer
-    n::Integer
-
-    function GrassmannianRing(k, n)
-        # valid_cycles = Dict(p => 0 for p in all_valid_partitions(k, n))
-        new(k, n)
-    end
-end
-
-
-struct SchubertCycle <: RingElem
-    k::Integer
-    n::Integer
-    terms::Dict{Generic.Partition, Integer}
-    parent::GrassmannianRing
-end
-
-###############################################################################
-#
-#   Implementing Ring/RingElem interface for Grassmannians
-#
-###############################################################################
-
-elem_type(::Type{GrassmannianRing}) = SchubertCycle
-parent_type(::Type{SchubertCycle}) = GrassmannianRing
-
-parent(a::SchubertCycle) = a.parent
-
-(g::GrassmannianRing)(x::Integer)::SchubertCycle = SchubertCycle(g.k, g.n, Dict(Generic.Partition([0], false)=>x), g)
-one(g::GrassmannianRing)::SchubertCycle = g(1)
-zero(g::GrassmannianRing)::SchubertCycle = g(0)
-is_zero(a::SchubertCycle) = all(values(a.terms) .== 0)
-(g::GrassmannianRing)() = zero(g)
-
-
-function (g::GrassmannianRing)(p::Generic.Partition)::SchubertCycle
-    if length(p) <= g.k && p[1] <= g.n-g.k
-        return SchubertCycle(g.k, g.n, Dict(p => 1), g)
-    else
-        throw(DomainError(g, "Invalid partition $p for $g"))
-    end
-end
-
-(g::GrassmannianRing)(p::Vector)::SchubertCycle = g(Partition(p))
-
-
-function (g::GrassmannianRing)(a::SchubertCycle)::SchubertCycle
-    parent(a) == g && return a
-    throw(DomainError(g, "Schubert cycle $a is not an element of $g"))
-end
-
-#=
-Thots:
-- Have the grassmannian constructor initialize ALL possible partitions as a hash with k=>0 for all k
-- Change *(...) to iterate through this instead of re-generate all partitions
-- Have schubertcycle constructor pull from this too
-- use Holy traits to detect special partitions for pieri
-=#
-
-
 ###############################################################################
 #
 #   Vector operations
@@ -175,12 +111,8 @@ end
 
 function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
     if !_is_pieri(p) && !_is_pieri(q)
-        print("Requires a special partition")
+        print("requires a special partition")
         return
-    end
-    if !_is_pieri(p)
-        # Make p the special partition
-        p, q = q, p
     end
 
     return _pieri_prod(p, q)
@@ -201,6 +133,7 @@ function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
     c = g(0)
     for (part_a, coeff_a) in a.terms
         for (part_b, coeff_b) in b.terms
+
             if _is_pieri(part_a) || _is_pieri(part_b)
                 prod = _pieri_prod(part_a, part_b)
                 for term in prod
@@ -208,14 +141,25 @@ function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
                         terms[term] = haskey(terms, term) ? terms[term] + coeff_a*coeff_b : coeff_a*coeff_b
                     end
                 end
+
             else
                 c += det(_giambellify(g, part_a, part_b))
             end
+
         end
     end
 
     d = SchubertCycle(a.k, a.n, terms, parent(a))
-    return c+ d
+    return c + d
+end
+
+function ^(a::SchubertCycle, n::Integer)::SchubertCycle
+    n < 0 && throw(DomainError(n, "exponent must be positive integer"))
+    prod = one(parent(a))
+    for _ in 1:n
+        prod *= a
+    end
+    return prod
 end
 
 # Pretty printing of SchubertCycle
@@ -250,16 +194,3 @@ function test(a::SchubertCycle)::Integer
     return a.k
 end
 
-_valid_partition(k::Integer, n::Integer, part::Generic.Partition)::Bool = (length(part) == 0) || ((part[1] <= n-k) && (length(part) <= k))
-_valid_schubert_cylce(k::Integer, n::Integer, a::SchubertCycle)::Bool = all(_valid_partition(k, n, part) for part in a.terms)
-
-function all_valid_partitions(k::Integer, n::Integer)
-    parts = []
-    for i in 1:k*(n-k)
-        for p in Generic.partitions(i)
-            _valid_partition(k, n, p) && push!(parts, p)
-        end
-    end
-    push!(parts, Partition([0], false))
-    return parts
-end
