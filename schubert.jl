@@ -137,6 +137,9 @@ end
 function _pieri_prod(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
     v_n = p.n + q.n
     valid_partitions = []
+    if _is_pieri(q)
+        p, q = q, p
+    end
     for part in Generic.partitions(v_n)
         if _valid_pieri_summand(q, part)
             push!(valid_partitions, part)
@@ -148,19 +151,26 @@ end
 
 function _giambelli_matrix(g::GrassmannianRing, p::Generic.Partition)
     mat_list = []
-    for i in 1:g.k-1
-        l = length(p) >= i ? p[i] : 0
+    k = length(p)
+    for i in 1:k
         row = []
-        for j in 1:g.k-1
+        for j in 1:k
+            l = p[i]
             if l-i+j > 0 && l-i+j <= g.n-g.k
                 push!(row, g([l-i+j]))
             else
-                push!(row, zero(g))
+                push!(row, one(g))
             end
         end
         push!(mat_list, row)
     end
     return matrix(g, reduce(vcat, transpose.(mat_list)))
+end
+
+function _giambellify(g::GrassmannianRing, p::Generic.Partition, q::Generic.Partition)
+    m = _giambelli_matrix(g, p)
+    m[1, :] = m[1, :]*g(q)
+    return m
 end
 
 function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
@@ -188,16 +198,24 @@ function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
     end
 
     terms = Dict{Generic.Partition, Integer}()
+    c = g(0)
     for (part_a, coeff_a) in a.terms
         for (part_b, coeff_b) in b.terms
-            for term in part_a*part_b
-                if _valid_partition(a.k, a.n, term)
-                    terms[term] = haskey(terms, term) ? terms[term] + coeff_a*coeff_b : coeff_a*coeff_b
+            if _is_pieri(part_a) || _is_pieri(part_b)
+                prod = _pieri_prod(part_a, part_b)
+                for term in prod
+                    if _valid_partition(g.k, g.n, term)
+                        terms[term] = haskey(terms, term) ? terms[term] + coeff_a*coeff_b : coeff_a*coeff_b
+                    end
                 end
+            else
+                c += det(_giambellify(g, part_a, part_b))
             end
         end
     end
-    return SchubertCycle(a.k, a.n, terms, parent(a))
+
+    d = SchubertCycle(a.k, a.n, terms, parent(a))
+    return c+ d
 end
 
 # Pretty printing of SchubertCycle
@@ -232,7 +250,7 @@ function test(a::SchubertCycle)::Integer
     return a.k
 end
 
-_valid_partition(k::Integer, n::Integer, part::Generic.Partition)::Bool = ((part[1] <= n-k) && (length(part) <= k))
+_valid_partition(k::Integer, n::Integer, part::Generic.Partition)::Bool = (length(part) == 0) || ((part[1] <= n-k) && (length(part) <= k))
 _valid_schubert_cylce(k::Integer, n::Integer, a::SchubertCycle)::Bool = all(_valid_partition(k, n, part) for part in a.terms)
 
 function all_valid_partitions(k::Integer, n::Integer)
