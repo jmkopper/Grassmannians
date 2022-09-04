@@ -1,9 +1,9 @@
 using AbstractAlgebra
-import Base.*
-import Base.+
-import Base.-
-import Base.==
 
+import Base: *, +, -, ==, ^
+import AbstractAlgebra: zero, one, elem_type, parent_type, parent
+
+include("types.jl")
 include("schubert.jl")
 
 g = GrassmannianRing(3, 6)
