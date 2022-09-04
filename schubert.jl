@@ -47,12 +47,7 @@ end
 #
 ###############################################################################
 
-function is_special_cycle(a::SchubertCycle)::Bool
-    nonzero_terms = [v for v in values(a.terms) if v != 0]
-    return length(nonzero_terms) == 1
-end
-
-_is_pieri(p::Generic.Partition)::Bool = (length(p) <= 1)
+@inline _is_pieri(p::Generic.Partition)::Bool = (length(p) <= 1)
 
    
 function _valid_pieri_summand(product_partition::Generic.Partition, summand_partition::Generic.Partition)::Bool
@@ -103,13 +98,13 @@ function _giambelli_matrix(g::GrassmannianRing, p::Generic.Partition)
     return matrix(g, reduce(vcat, transpose.(mat_list)))
 end
 
-function _giambellify(g::GrassmannianRing, p::Generic.Partition, q::Generic.Partition)
+@inline function _giambellify(g::GrassmannianRing, p::Generic.Partition, q::Generic.Partition)
     m = _giambelli_matrix(g, p)
     m[1, :] = m[1, :]*g(q)
     return m
 end
 
-function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
+@inline function *(p::Generic.Partition, q::Generic.Partition)::Vector{Generic.Partition}
     if !_is_pieri(p) && !_is_pieri(q)
         print("requires a special partition")
         return
@@ -162,35 +157,4 @@ function ^(a::SchubertCycle, n::Integer)::SchubertCycle
     return prod
 end
 
-# Pretty printing of SchubertCycle
-function Base.show(io::IO, a::SchubertCycle)
-    if is_zero(a)
-        print(io, "0")
-        return
-    end
-    str::String = ""
-    for (term, coeff) in a.terms
-        term_str::String = "σ("
-        for (index, val) in enumerate(term)
-            term_str *= "$val"
-            if index < length(term)
-                term_str *= ","
-            end
-        end
-        term_str *= ")"
-        if coeff == 1
-            str *= term_str * " + "
-        elseif coeff == -1
-            str *= "-" * term_str * " + "
-        elseif coeff != 0
-            str *= string(coeff) * term_str * " + "
-        end
-    end
-    print(io, str[1:end-2])
-end
-
-function test(a::SchubertCycle)::Integer
-    print(a.partition)
-    return a.k
-end
 
