@@ -2,6 +2,7 @@ using AbstractAlgebra
 
 import Base: *, +, -, ==, ^
 import AbstractAlgebra: zero, one, elem_type, parent_type, parent
+import Primes: factor as pfactor
 
 include("types.jl")
 include("schubert.jl")
@@ -28,3 +29,5 @@ d = g([1])
 mymat = g[a b;c d]
 det(mymat)
 m = _giambelli_matrix(g, Partition([3,2]))
+g = GrassmannianRing(5, 10)
+deg(g)

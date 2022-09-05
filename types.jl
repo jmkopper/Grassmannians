@@ -49,13 +49,38 @@ end
 @inline dim(g::GrassmannianRing) = g.k * (g.n - g.k)
 
 function deg(g::GrassmannianRing)::Integer
-    dim(g) <= 20 || throw(OverflowError("Grassmannian dimension $(dim(g)) exceeds 20 and I'm a bad programmer"))
+    if dim(g) > 20
+        return _big_deg(g)
+    end
+
     prod = factorial(g.k*(g.n-g.k))
     for i in 1:g.k
         prod *= factorial(i-1) / factorial(g.n-g.k+i-1)
     end
     return prod
 end
+
+@inline function _collect_factorial_factors!(terms::Dict{Integer, Integer}, n::Integer; func=+)
+    for i in 2:n
+        for (p, a) in pfactor(i)
+            terms[p] = haskey(terms, p) ? func(terms[p], a) : a
+        end
+    end
+end
+
+function _big_deg(g::GrassmannianRing)::Integer
+
+    terms=Dict{Integer, Integer}()
+    _collect_factorial_factors!(terms, g.k * (g.n - g.k))
+    for i in 2:g.k
+        _collect_factorial_factors!(terms, i-1)
+        _collect_factorial_factors!(terms, g.n-g.k+i-1; func=-)
+    end
+    _collect_factorial_factors!(terms, g.n-g.k; func=-)
+    
+    return prod(p^a for (p, a) in terms)
+end
+
 
 # Pretty printing of SchubertCycle
 function Base.show(io::IO, a::SchubertCycle)
