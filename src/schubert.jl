@@ -1,8 +1,6 @@
-###############################################################################
-#
-#   Vector operations
-#
-###############################################################################
+#========================
+    Vector operations
+========================#
 function ==(a::SchubertCycle, b::SchubertCycle)
     parent(a) != parent(b) && return false
         for (p, v) in a.terms
@@ -41,11 +39,9 @@ end
 -(a::SchubertCycle) = (-1)*a
 -(a::SchubertCycle, b::SchubertCycle)::SchubertCycle = a + (-1)*b
 
-###############################################################################
-#
-#   Schubert calculus
-#
-###############################################################################
+#========================
+    Schubert calculus
+========================#
 
 @inline _is_pieri(p::Generic.Partition)::Bool = (length(p) <= 1)
 
