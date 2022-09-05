@@ -120,3 +120,11 @@ function Base.show(io::IO, a::SchubertCycle)
     end
     print(io, str[1:end-2])
 end
+
+
+#========================
+    Util
+========================#
+
+_remove_zero_terms!(a::SchubertCycle) = filter!(p -> (p.second != 0), a.terms)
+_nonzero_terms(a::SchubertCycle)::Dict{Generic.Partition, Integer} = filter(p -> (p.second != 0), a.terms)
