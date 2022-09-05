@@ -33,7 +33,7 @@ one(g::GrassmannianRing)::SchubertCycle = g(1)
 zero(g::GrassmannianRing)::SchubertCycle = g(0)
 is_zero(a::SchubertCycle) = all(values(a.terms) .== 0)
 
-(g::GrassmannianRing)(p::Vector)::SchubertCycle = g(Partition(p))
+(g::GrassmannianRing)(p::Vector{Integer})::SchubertCycle = g(Partition(p))
 function (g::GrassmannianRing)(p::Generic.Partition)::SchubertCycle
     if _valid_partition(g.k, g.n, p)
         return SchubertCycle(g.k, g.n, Dict(p => 1), g)
@@ -57,7 +57,7 @@ end
 
 @inline dim(g::GrassmannianRing) = g.k * (g.n - g.k)
 
-function deg(g::GrassmannianRing)::Integer
+function deg(g::GrassmannianRing)
     if dim(g) > 20
         return _big_deg(g)
     end
@@ -77,8 +77,7 @@ end
     end
 end
 
-function _big_deg(g::GrassmannianRing)::Integer
-
+function _big_deg(g::GrassmannianRing)
     terms=Dict{Integer, Integer}()
     _collect_factorial_factors!(terms, g.k * (g.n - g.k))
     for i in 2:g.k
