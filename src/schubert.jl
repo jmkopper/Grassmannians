@@ -43,9 +43,9 @@ end
     Schubert calculus
 ========================#
 
+#= Pieri's formula =#
 @inline _is_pieri(p::Generic.Partition)::Bool = (length(p) <= 1)
 
-   
 function _valid_pieri_summand(product_partition::Generic.Partition, summand_partition::Generic.Partition)::Bool
     """
     Determine whether `summand_partition` is a valid summand in Pieri's formula, assuming its codimension is correct (not checked)
@@ -76,6 +76,8 @@ function _pieri_prod(p::Generic.Partition, q::Generic.Partition)::Vector{Generic
     return valid_partitions
 end
 
+#= Giambelli's formula =#
+
 function _giambelli_matrix(g::GrassmannianRing, p::Generic.Partition)
     mat_list = []
     k = length(p)
@@ -96,7 +98,7 @@ function _giambelli_matrix(g::GrassmannianRing, p::Generic.Partition)
     return matrix(g, reduce(vcat, transpose.(mat_list)))
 end
 
-function get_cofactor(R::Generic.Ring, M, row::Integer, col::Integer)
+function _get_cofactor(R::Generic.Ring, M, row::Integer, col::Integer)
     n = size(M)[1]
     cofactor = []
 
@@ -116,7 +118,7 @@ function get_cofactor(R::Generic.Ring, M, row::Integer, col::Integer)
 end
 
 
-function cofactor_det(R::Generic.Ring, M)
+function _cofactor_det(R::Generic.Ring, M)
     n = size(M)[1]
     if n == 1
         return M[1,1]
@@ -124,9 +126,9 @@ function cofactor_det(R::Generic.Ring, M)
 
     det = 0
     for col in 1:n
-        N = get_cofactor(R, M, 1, col)
+        N = _get_cofactor(R, M, 1, col)
         N[1, :] = N[1, :] * M[1, col]
-        det += cofactor_det(R, N) * (-1)^(1+col)
+        det += _cofactor_det(R, N) * (-1)^(1+col)
     end
     return det
 end
@@ -146,6 +148,11 @@ end
     return _pieri_prod(p, q)
 end
 
+#=
+    Product formula for Schubert cycles. Implements Giambelli and Pieri formulas.
+    Cofactor expansion algorithm for determinants is used to force Pieri's rule in
+    the actual computation of Giambelli's formula.
+=#
 function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
     if parent(a) != parent(b)
         throw(DomainError(a, "cycles must be on the same Grassmannian"))
@@ -159,21 +166,22 @@ function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
 
     terms = Dict{Generic.Partition, Integer}()
     c = g(0)
-    for (part_a, coeff_a) in _nonzero_terms(a)
-        for (part_b, coeff_b) in _nonzero_terms(b)
 
-            if _is_pieri(part_a) || _is_pieri(part_b)
-                for term in _pieri_prod(part_a, part_b)
-                    if _valid_partition(g.k, g.n, term)
-                        terms[term] = haskey(terms, term) ? terms[term] + coeff_a*coeff_b : coeff_a*coeff_b
-                    end
+    for (at, bt) in Iterators.product(_nonzero_terms(a), _nonzero_terms(b))
+        (part_a, coeff_a) = at
+        (part_b, coeff_b) = bt
+
+        if _is_pieri(part_a) || _is_pieri(part_b)
+            for term in _pieri_prod(part_a, part_b)
+                if _valid_partition(g.k, g.n, term)
+                    terms[term] = haskey(terms, term) ? terms[term] + coeff_a*coeff_b : coeff_a*coeff_b
                 end
-
-            else
-                c += cofactor_det(g, _giambellify(g, part_a, part_b))
             end
 
+        else
+            c += _cofactor_det(g, _giambellify(g, part_a, part_b))
         end
+
     end
 
     d = SchubertCycle(a.k, a.n, terms, parent(a))
