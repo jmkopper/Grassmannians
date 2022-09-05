@@ -85,13 +85,50 @@ function _giambelli_matrix(g::GrassmannianRing, p::Generic.Partition)
             l = p[i]
             if l-i+j > 0 && l-i+j <= g.n-g.k
                 push!(row, g([l-i+j]))
-            else
+            elseif l-i+j == 0
                 push!(row, one(g))
+            else
+                push!(row, zero(g))
             end
         end
         push!(mat_list, row)
     end
     return matrix(g, reduce(vcat, transpose.(mat_list)))
+end
+
+function get_cofactor(R::Generic.Ring, M, row::Integer, col::Integer)
+    n = size(M)[1]
+    cofactor = []
+
+    for i in 1:n
+        if i != row
+            new_row = []
+            for j in 1:n
+                if j != col
+                    push!(new_row, M[i,j])
+                end
+            end
+            push!(cofactor, new_row)
+        end
+    end
+
+    return matrix(R, reduce(vcat, transpose.(cofactor)))
+end
+
+
+function cofactor_det(R::Generic.Ring, M)
+    n = size(M)[1]
+    if n == 1
+        return M[1,1]
+    end
+
+    det = 0
+    for col in 1:n
+        N = get_cofactor(R, M, 1, col)
+        N[1, :] = N[1, :] * M[1, col]
+        det += cofactor_det(R, N) * (-1)^(1+col)
+    end
+    return det
 end
 
 @inline function _giambellify(g::GrassmannianRing, p::Generic.Partition, q::Generic.Partition)
@@ -122,8 +159,8 @@ function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
 
     terms = Dict{Generic.Partition, Integer}()
     c = g(0)
-    for (part_a, coeff_a) in a.terms
-        for (part_b, coeff_b) in b.terms
+    for (part_a, coeff_a) in _nonzero_terms(a)
+        for (part_b, coeff_b) in _nonzero_terms(b)
 
             if _is_pieri(part_a) || _is_pieri(part_b)
                 for term in _pieri_prod(part_a, part_b)
@@ -133,14 +170,16 @@ function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
                 end
 
             else
-                c += det(_giambellify(g, part_a, part_b))
+                c += cofactor_det(g, _giambellify(g, part_a, part_b))
             end
 
         end
     end
 
     d = SchubertCycle(a.k, a.n, terms, parent(a))
-    return c + d
+    x = c + d
+    _remove_zero_terms!(x)
+    return x
 end
 
 function ^(a::SchubertCycle, n::Integer)::SchubertCycle
