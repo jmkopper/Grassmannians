@@ -1,0 +1,8 @@
+name = "Grassmannians"
+uuid = "98910963-d514-4ece-9670-707dde8fdb1c"
+authors = ["Jay Kopper <jay.kopper@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+AbstractAlgebra = "c3fe647b-3220-5bb0-a1ea-a7954cac585d"
+Primes = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
