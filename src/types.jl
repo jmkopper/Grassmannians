@@ -1,6 +1,6 @@
-#=
-    Implementing Ring/RingElem interface for Grassmannians
-=#
+#=================================
+    Implementing Ring interface
+=================================#
 
 struct GrassmannianRing <: Generic.Ring
     k::Integer
@@ -44,9 +44,9 @@ end
 
 @inline _valid_partition(k::Integer, n::Integer, part::Generic.Partition)::Bool = (length(part) == 0) || ((part[1] <= n-k) && (length(part) <= k))
 
-#=
+#========================
     Geometry
-=#
+========================#
 
 
 @inline dim(g::GrassmannianRing) = g.k * (g.n - g.k)
@@ -85,9 +85,9 @@ function _big_deg(g::GrassmannianRing)::Integer
 end
 
 
-#=
-    Pretty Printing
-=#
+#========================
+    Pretty printing
+========================#
 function Base.show(io::IO, a::SchubertCycle)
     if is_zero(a)
         print(io, "0")
