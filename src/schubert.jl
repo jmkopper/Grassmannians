@@ -126,8 +126,7 @@ function *(a::SchubertCycle, b::SchubertCycle)::SchubertCycle
         for (part_b, coeff_b) in b.terms
 
             if _is_pieri(part_a) || _is_pieri(part_b)
-                prod = _pieri_prod(part_a, part_b)
-                for term in prod
+                for term in _pieri_prod(part_a, part_b)
                     if _valid_partition(g.k, g.n, term)
                         terms[term] = haskey(terms, term) ? terms[term] + coeff_a*coeff_b : coeff_a*coeff_b
                     end
