@@ -5,6 +5,12 @@
 struct GrassmannianRing <: Generic.Ring
     k::Integer
     n::Integer
+    function GrassmannianRing(k, n)
+        if k <= 0 || n <= 0 || k > n
+            throw(ArgumentError("Invalid k and n"))
+        end
+        new(k, n)
+    end
 end
 
 
@@ -29,7 +35,7 @@ is_zero(a::SchubertCycle) = all(values(a.terms) .== 0)
 
 (g::GrassmannianRing)(p::Vector)::SchubertCycle = g(Partition(p))
 function (g::GrassmannianRing)(p::Generic.Partition)::SchubertCycle
-    if length(p) <= g.k && p[1] <= g.n-g.k
+    if _valid_partition(g.k, g.n, p)
         return SchubertCycle(g.k, g.n, Dict(p => 1), g)
     else
         throw(DomainError(g, "Invalid partition $p for $g"))
@@ -44,10 +50,10 @@ end
 
 @inline _valid_partition(k::Integer, n::Integer, part::Generic.Partition)::Bool = (length(part) == 0) || ((part[1] <= n-k) && (length(part) <= k))
 
+
 #========================
     Geometry
 ========================#
-
 
 @inline dim(g::GrassmannianRing) = g.k * (g.n - g.k)
 
@@ -88,6 +94,7 @@ end
 #========================
     Pretty printing
 ========================#
+
 function Base.show(io::IO, a::SchubertCycle)
     if is_zero(a)
         print(io, "0")
