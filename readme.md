@@ -1,0 +1,2 @@
+# Grassmannians.jl
+A Julia language implementation of Grassmannian Chow rings and Schubert calculus. The types `GrassmannianRing` and `SchubertCycle` are introduced and implement the ring interfaces of [AbstractAlgebra.jl](https://github.com/Nemocas/AbstractAlgebra.jl). This is a work in progress.
